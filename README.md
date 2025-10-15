@@ -25,6 +25,15 @@
 ### 6. Sincronización de migraciones
 - Se usaron los comandos `migrate stock zero --fake` y `migrate stock` para forzar la recreación de tablas cuando Django creía que ya estaban aplicadas.
 
+## Modificaciones realizadas en la base de datos
+
+- Se eliminaron manualmente columnas duplicadas (como `aplicado_en`, `stock_antes`, `stock_despues`, `usuario`) en la tabla `stock_movimientostock` para resolver conflictos de migraciones.
+- Se eliminaron y recrearon las tablas `stock_producto`, `stock_lote` y `stock_movimientostock` para limpiar datos incompatibles y asegurar la estructura correcta.
+- Se corrigieron valores de tipo string en campos de fecha/hora (`aplicado_en`, `creado_en`, `actualizado_en`) convirtiéndolos a `DATETIME` o asignando `NULL` para evitar errores de conversión en Django.
+- Se aplicaron constraints y claves foráneas según los modelos definidos en Django.
+- Se usaron comandos SQL como `ALTER TABLE ... DROP COLUMN ...`, `UPDATE ... SET ...`, y `CREATE TABLE ...` para ajustar la estructura y los datos.
+- Se sincronizó el estado de las migraciones con la base de datos usando `--fake` y `--fake-initial` cuando fue necesario.
+
 ---
 
 Este archivo documenta los principales problemas y soluciones encontradas durante la configuración y puesta en marcha del backend con Django y MySQL.
