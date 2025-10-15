@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Seguridad / Debug
 SECRET_KEY = 'django-insecure-&tyemyoedsf%#74x-_0)0vtcmdslurs^!ge3tl*dd2=d+81kh_'
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "pharma-api-vt24.onrender.com"]
 
 # Application definition
 INSTALLED_APPS = [
