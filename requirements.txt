@@ -1,0 +1,7 @@
+Django>=5.2,<6.0
+pymysql
+djangorestframework
+django-filter
+django-extensions
+djangorestframework-simplejwt
+PyYAML
