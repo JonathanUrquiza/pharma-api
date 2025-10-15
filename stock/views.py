@@ -10,6 +10,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Producto, Lote, MovimientoStock
 from .serializers import ProductoSerializer, LoteSerializer, MovimientoStockSerializer
 from .permissions import IsStaffOrReadOnly
+# Filtros/orden de DRF
+from .filters import CompatDjangoFilterBackend as DjangoFilterBackend
+from rest_framework.filters import OrderingFilter  # (opcional) también SearchFilter si lo usás
 
 
 # ---------------------------------------
@@ -18,7 +21,9 @@ from .permissions import IsStaffOrReadOnly
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.all().order_by('-id')
     serializer_class = ProductoSerializer
-    permission_classes = [IsStaffOrReadOnly]  # default del viewset
+    permission_classes = [IsStaffOrReadOnly]
+    lookup_field = "id"
+    lookup_url_kwarg = "id"
 
     @action(
         detail=True,
@@ -27,9 +32,9 @@ class ProductoViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
         authentication_classes=[JWTAuthentication],
     )
-    def egreso_fefo(self, request, pk=None):
+    def egreso_fefo(self, request, id=None):
         """
-        POST /api/productos/{id}/egreso-fefo/
+        POST /api/productos/{id}/egreso-fefo
         Body: {"cantidad": 5, "motivo": "...", "documento_ref": "..."}
         Toma el lote con fecha de vencimiento más próxima que tenga stock suficiente.
         """
@@ -45,13 +50,16 @@ class ProductoViewSet(viewsets.ModelViewSet):
         if not lote:
             return Response({"detail": "No hay lote con stock suficiente"}, status=400)
 
-        ser = MovimientoStockSerializer(data={
-            "lote": lote.id,
-            "tipo": "EGRESO",
-            "cantidad": cantidad,
-            "motivo": request.data.get("motivo", "Egreso FEFO"),
-            "documento_ref": request.data.get("documento_ref", ""),
-        })
+        ser = MovimientoStockSerializer(
+            data={
+                "lote": lote.id,
+                "tipo": "EGRESO",
+                "cantidad": cantidad,
+                "motivo": request.data.get("motivo", "Egreso FEFO"),
+                "documento_ref": request.data.get("documento_ref", ""),
+            },
+            context={"request": request},  # <<< AUDITORÍA: pasa request para setear usuario
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
 
@@ -75,12 +83,8 @@ class ProductoViewSet(viewsets.ModelViewSet):
     )
     def ingreso_scan(self, request):
         """
-        Crea o busca Producto + Lote a partir de un scan
-        y suma 1 (o 'cantidad') al stock.
+        Crea o busca Producto + Lote a partir de un scan y suma 1 (o 'cantidad') al stock.
         """
-        # DEBUG: ver si llega el header Authorization
-        print("DEBUG AUTH >>>", request.META.get("HTTP_AUTHORIZATION"))
-
         gtin = str(request.data.get('gtin', '')).strip()
         if not gtin:
             return Response({'detail': 'gtin requerido'}, status=400)
@@ -114,12 +118,15 @@ class ProductoViewSet(viewsets.ModelViewSet):
         if cantidad <= 0:
             return Response({'detail': 'cantidad debe ser > 0'}, status=400)
 
-        movimiento = MovimientoStockSerializer(data={
-            'lote': lote.id, 'tipo': 'INGRESO',
-            'cantidad': cantidad,
-            'motivo': request.data.get('motivo', 'Ingreso SCAN'),
-            'documento_ref': request.data.get('documento_ref', 'SCAN'),
-        })
+        movimiento = MovimientoStockSerializer(
+            data={
+                'lote': lote.id, 'tipo': 'INGRESO',
+                'cantidad': cantidad,
+                'motivo': request.data.get('motivo', 'Ingreso SCAN'),
+                'documento_ref': request.data.get('documento_ref', 'SCAN'),
+            },
+            context={"request": request},  # <<< AUDITORÍA
+        )
         movimiento.is_valid(raise_exception=True)
         movimiento.save()
 
@@ -131,48 +138,59 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
 
 # ---------------------------------------
-# LoteViewSet
+# LoteViewSet  (con lookup por {id})
 # ---------------------------------------
 class LoteViewSet(viewsets.ModelViewSet):
     queryset = Lote.objects.select_related('producto').all().order_by('-id')
     serializer_class = LoteSerializer
     permission_classes = [IsStaffOrReadOnly]
+    lookup_field = "id"
+    lookup_url_kwarg = "id"
 
     @action(detail=True, methods=['post'])
-    def ingreso(self, request, pk=None):
+    def ingreso(self, request, id=None):
         lote = self.get_object()
-        ser = MovimientoStockSerializer(data={
-            'lote': lote.id, 'tipo': 'INGRESO',
-            'cantidad': request.data.get('cantidad'),
-            'motivo': request.data.get('motivo', ''),
-            'documento_ref': request.data.get('documento_ref', ''),
-        })
+        ser = MovimientoStockSerializer(
+            data={
+                'lote': lote.id, 'tipo': 'INGRESO',
+                'cantidad': request.data.get('cantidad'),
+                'motivo': request.data.get('motivo', ''),
+                'documento_ref': request.data.get('documento_ref', ''),
+            },
+            context={"request": request},  # <<< AUDITORÍA
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
         return Response({'ok': True, 'lote': LoteSerializer(lote).data})
 
     @action(detail=True, methods=['post'])
-    def egreso(self, request, pk=None):
+    def egreso(self, request, id=None):
         lote = self.get_object()
-        ser = MovimientoStockSerializer(data={
-            'lote': lote.id, 'tipo': 'EGRESO',
-            'cantidad': request.data.get('cantidad'),
-            'motivo': request.data.get('motivo', ''),
-            'documento_ref': request.data.get('documento_ref', ''),
-        })
+        ser = MovimientoStockSerializer(
+            data={
+                'lote': lote.id, 'tipo': 'EGRESO',
+                'cantidad': request.data.get('cantidad'),
+                'motivo': request.data.get('motivo', ''),
+                'documento_ref': request.data.get('documento_ref', ''),
+            },
+            context={"request": request},  # <<< AUDITORÍA
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
         return Response({'ok': True, 'lote': LoteSerializer(lote).data})
 
     @action(detail=True, methods=['post'])
-    def ajuste(self, request, pk=None):
+    def ajuste(self, request, id=None):
         lote = self.get_object()
-        ser = MovimientoStockSerializer(data={
-            'lote': lote.id, 'tipo': 'AJUSTE',
-            'cantidad': request.data.get('cantidad'),
-            'motivo': request.data.get('motivo', ''),
-            'documento_ref': request.data.get('documento_ref', ''),
-        })
+        ser = MovimientoStockSerializer(
+            data={
+                'lote': lote.id, 'tipo': 'AJUSTE',
+                'cantidad': request.data.get('cantidad'),
+                'motivo': request.data.get('motivo', ''),
+                'documento_ref': request.data.get('documento_ref', ''),
+            },
+            context={"request": request},  # <<< AUDITORÍA
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
         return Response({'ok': True, 'lote': LoteSerializer(lote).data})
@@ -182,8 +200,18 @@ class LoteViewSet(viewsets.ModelViewSet):
 # MovimientoViewSet (solo lectura)
 # ---------------------------------------
 class MovimientoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = MovimientoStock.objects.select_related('lote', 'lote__producto').all().order_by('-id')
+    queryset = (MovimientoStock.objects
+                .select_related('lote', 'lote__producto')
+                .all()
+                .order_by('-aplicado_en', '-id'))
     serializer_class = MovimientoStockSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "id"
+
+    # Opcional: filtros/orden
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['tipo', 'lote', 'lote__producto']
+    ordering_fields = ['aplicado_en', 'id', 'cantidad']
 
 
 # ---------------------------------------
