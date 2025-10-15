@@ -92,10 +92,9 @@ TIME_ZONE = "America/Argentina/Buenos_Aires"
 USE_I18N = True
 USE_TZ = True
 
-# Static files: agrega ./static para overrides (CSS del admin, logos, etc.)
 STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]   # <-- AÑADIDO
-# STATIC_ROOT = BASE_DIR / "staticfiles"   # <-- en prod, descomentar y ejecutar collectstatic
+# STATICFILES_DIRS = [BASE_DIR / "static"]   # <-- solo usar en desarrollo si tienes archivos personalizados
+STATIC_ROOT = BASE_DIR / "staticfiles"   # <-- en prod, descomentar y ejecutar collectstatic
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
