@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",       # <-- AÑADIDO para filtros DRF
     "django_extensions",    # show_urls
+    "corsheaders",          # <-- AÑADIDO para CORS
     # "drf_spectacular",    # opcional
     # "drf_spectacular_sidecar",  # opcional
 
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # <-- AÑADIDO para CORS (debe estar ANTES de CommonMiddleware)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -122,3 +124,37 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
+
+# CORS - Permite cualquier origen (⚠️ en producción considera restringirlo)
+CORS_ALLOW_ALL_ORIGINS = True  # Permite requests desde cualquier dominio
+CORS_ALLOW_CREDENTIALS = True  # Permite envío de cookies y auth headers
+
+# Si prefieres whitelist específica, comenta la línea anterior y usa:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://localhost:5173",
+#     "https://tu-frontend.com",
+# ]
+
+# Headers permitidos en requests
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# Métodos HTTP permitidos
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
